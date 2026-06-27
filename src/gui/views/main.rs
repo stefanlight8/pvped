@@ -4,24 +4,26 @@ use {
         gui::{
             element::Element,
             views::{
+                kills::KillsState,
+                players::PlayersState,
                 plot::{PlotMessage, PlotState},
-                statistics::Statistics,
+                statistics::StatisticsState,
             },
-            widget::frag::frag,
         },
         journals::{get_journals, scan_journals},
         settings::Settings,
     },
     iced::{
-        Length, Padding, Task,
+        Length, Task,
         widget::{button, column, container, row, scrollable},
     },
     std::path::PathBuf,
 };
 
 pub struct MainState {
-    frags: Vec<Frag>,
-    statistics: Statistics,
+    kills: KillsState,
+    players: PlayersState,
+    statistics: StatisticsState,
     plot: PlotState,
 }
 
@@ -38,8 +40,9 @@ pub enum MainMessage {
 impl MainState {
     pub fn new() -> MainState {
         MainState {
-            frags: Vec::new(),
-            statistics: Statistics::new(),
+            kills: KillsState::default(),
+            players: PlayersState::default(),
+            statistics: StatisticsState::new(),
             plot: PlotState::new(),
         }
     }
@@ -75,10 +78,10 @@ impl MainState {
             MainMessage::Frags(frags) => {
                 tracing::debug!("received frags: {:?}", frags);
 
-                self.statistics.update(&frags);
+                self.kills.extend(&frags);
                 self.plot.extend(&frags);
-                self.frags.extend(frags);
-                self.frags.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+                self.players.extend(&frags);
+                self.statistics.extend(&frags);
             }
             MainMessage::Plot(message) => self.plot.update(message),
             _ => (),
@@ -89,17 +92,8 @@ impl MainState {
 
     pub fn view(&self) -> Element<'_, MainMessage> {
         row![
-            scrollable(
-                column(self.frags.iter().map(|entry| frag(entry).into()))
-                    .padding(Padding {
-                        top: 6.,
-                        bottom: 6.,
-                        left: 6.,
-                        right: 18., // because of scrollbar
-                    })
-                    .spacing(4)
-            )
-            .width(Length::Fill),
+            self.kills.view().width(Length::Fill),
+            self.players.view().width(Length::Fill),
             column![
                 container(self.plot.view().map(MainMessage::Plot))
                     .padding(6)
@@ -111,11 +105,7 @@ impl MainState {
                 ),
                 container(
                     row![
-                        button("Scan").on_press_maybe(if self.frags.is_empty() {
-                            Some(MainMessage::Scan)
-                        } else {
-                            None
-                        }),
+                        button("Scan").on_press(MainMessage::Scan),
                         button("Settings").on_press(MainMessage::Settings)
                     ]
                     .spacing(6)

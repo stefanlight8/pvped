@@ -19,7 +19,7 @@ fn stat_card<'a, Message: 'a>(label: &'a str, value: String) -> Element<'a, Mess
 }
 
 #[derive(Debug, Default)]
-pub struct Statistics {
+pub struct StatisticsState {
     total_frags: usize,
     kills: usize,
     deaths: usize,
@@ -29,7 +29,7 @@ pub struct Statistics {
     last_frag: Option<DateTime<Utc>>,
 }
 
-impl Statistics {
+impl StatisticsState {
     pub fn new() -> Self {
         Self::default()
     }
@@ -66,7 +66,7 @@ impl Statistics {
         .spacing(4)
     }
 
-    pub fn update(&mut self, frags: &[Frag]) {
+    pub fn extend(&mut self, frags: &[Frag]) {
         for frag in frags {
             self.kills += frag.is_kill() as usize;
             self.deaths += !frag.is_kill() as usize;
